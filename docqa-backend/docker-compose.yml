@@ -1,0 +1,60 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: docqa-postgres
+    environment:
+      POSTGRES_DB: docqa
+      POSTGRES_USER: docqa
+      POSTGRES_PASSWORD: docqa123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docqa -d docqa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docqa-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DOCQA_DB_HOST: postgres
+      DOCQA_DB_PORT: 5432
+      DOCQA_DB_NAME: docqa
+      DOCQA_DB_USER: docqa
+      DOCQA_DB_PASSWORD: docqa123
+      # 未配置 Key 时自动降级 Mock 模式（演示可跑通全链路）
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      LLM_MODEL: ${LLM_MODEL:-glm-4-flash}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-embedding-3}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    image: node:22-alpine
+    container_name: docqa-frontend
+    working_dir: /app
+    volumes:
+      - ../:/app
+      - node_modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  node_modules:

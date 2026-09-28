@@ -1,0 +1,85 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: docqa-backend
+  datasource:
+    url: "jdbc:postgresql://${DOCQA_DB_HOST:localhost}:${DOCQA_DB_PORT:5432}/${DOCQA_DB_NAME:docqa}?sslmode=disable&gssEncMode=disable"
+    username: ${DOCQA_DB_USER:docqa}
+    password: ${DOCQA_DB_PASSWORD:docqa123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+  mvc:
+    async:
+      request-timeout: 180000   # SSE 长连接超时 3 分钟
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
+      # timestamptz 逻辑删：删除=写当前时间，未删=IS NULL
+      logic-delete-value: 'now()'
+      logic-not-delete-value: 'null'
+      logic-config-field: deletedAt
+
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  timeout: 86400
+  is-concurrent: true
+  is-log: false
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+docqa:
+  # 文件存储（按年月分目录）
+  storage:
+    base-dir: ${user.home}/docqa-files
+  # 入库管线
+  ingest:
+    chunk-size: 500        # 切片大小（字符）
+    chunk-overlap: 80      # 切片重叠（字符）
+    embed-batch-size: 32   # 向量化批次
+    retry-times: 3         # 外部 API 重试次数
+    retry-interval-ms: 1000
+  # 检索配置
+  search:
+    recall-size: 50        # 每路召回条数
+    bm25-weight: 0.4       # RRF 融合 BM25 权重
+    vector-weight: 0.6     # RRF 融合向量权重
+    rrf-k: 60
+    qa-top-k: 6            # RAG 问答取 Top-K
+  # Embedding 向量服务（OpenAI 兼容协议；api-key 为空时自动降级 Mock）
+  embedding:
+    base-url: ${EMBEDDING_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
+    api-key: ${EMBEDDING_API_KEY:}
+    model: ${EMBEDDING_MODEL:embedding-3}
+    dimension: 1024
+  # LLM 问答服务（OpenAI 兼容协议；api-key 为空时自动降级 Mock）
+  llm:
+    base-url: ${LLM_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
+    api-key: ${LLM_API_KEY:}
+    model: ${LLM_MODEL:glm-4-flash}
+    temperature: 0.3
+    timeout-seconds: 90
+
+logging:
+  level:
+    com.docqa: INFO
+    com.docqa.system.mapper: DEBUG

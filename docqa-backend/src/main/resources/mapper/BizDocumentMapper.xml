@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.docqa.document.mapper.BizDocumentMapper">
+
+    <select id="selectDocPage" resultType="java.util.HashMap">
+        SELECT d.id AS doc_id, d.doc_code, d.title, d.category_id, d.status, d.summary,
+               d.source_type, d.view_count, d.quote_count, d.favorite_count,
+               d.updated_at, c.category_name,
+               v.index_status, v.version_no, u.nickname AS owner_name
+        FROM biz_document d
+        LEFT JOIN biz_category c ON c.id = d.category_id
+        LEFT JOIN biz_doc_version v ON v.id = d.current_version_id
+        LEFT JOIN sys_user u ON u.id = d.owner_id
+        WHERE d.deleted_at IS NULL
+        <if test="keyword != null and keyword != ''">
+            AND (d.title ILIKE '%' || #{keyword} || '%' OR d.doc_code ILIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="categoryId != null">
+            AND d.category_id = #{categoryId}
+        </if>
+        <if test="status != null and status != ''">
+            AND d.status = #{status}
+        </if>
+        ORDER BY d.updated_at DESC
+        LIMIT #{size} OFFSET #{page}
+    </select>
+
+    <select id="countDocPage" resultType="long">
+        SELECT count(*) FROM biz_document d WHERE d.deleted_at IS NULL
+        <if test="keyword != null and keyword != ''">
+            AND (d.title ILIKE '%' || #{keyword} || '%' OR d.doc_code ILIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="categoryId != null">
+            AND d.category_id = #{categoryId}
+        </if>
+        <if test="status != null and status != ''">
+            AND d.status = #{status}
+        </if>
+    </select>
+
+</mapper>
