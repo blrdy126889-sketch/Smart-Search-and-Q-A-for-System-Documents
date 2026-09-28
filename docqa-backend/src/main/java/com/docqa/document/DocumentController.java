@@ -6,6 +6,7 @@ import com.docqa.category.mapper.BizCategoryMapper;
 import com.docqa.common.api.PageResult;
 import com.docqa.common.api.R;
 import com.docqa.common.exception.BizException;
+import com.docqa.common.util.CamelUtil;
 import com.docqa.common.log.OpLog;
 import com.docqa.common.util.SecurityUtils;
 import com.docqa.document.entity.BizDocument;
@@ -132,7 +133,7 @@ public class DocumentController {
                                                    @RequestParam(required = false) String status) {
         SecurityUtils.checkPerm("doc:list");
         return R.ok(PageResult.of(
-                documentMapper.selectDocPage(keyword, categoryId, status, (page - 1) * size, size),
+                CamelUtil.camel(documentMapper.selectDocPage(keyword, categoryId, status, (page - 1) * size, size)),
                 documentMapper.countDocPage(keyword, categoryId, status), page, size));
     }
 
@@ -140,7 +141,7 @@ public class DocumentController {
     public R<Map<String, Object>> detail(@PathVariable Long id, HttpServletRequest req) {
         BizDocument doc = requireDoc(id);
         Map<String, Object> data = toMap(doc);
-        data.put("versions", versionMapper.selectVersionsByDocId(id));
+        data.put("versions", CamelUtil.camel(versionMapper.selectVersionsByDocId(id)));
         long userId = SecurityUtils.userId();
         data.put("favorited", socialMapper.isFavorited(userId, id));
         data.put("subscribed", false);
@@ -305,26 +306,22 @@ public class DocumentController {
     /* ==================== 收藏 / 订阅 / 通知 ==================== */
 
     @PostMapping("/documents/{id}/favorite")
-    @Transactional
     public R<Void> favorite(@PathVariable Long id) {
         requireDoc(id);
         long uid = SecurityUtils.userId();
-        if (!socialMapper.isFavorited(uid, id)) {
-            socialMapper.favorite(uid, id);
+        if (socialMapper.favorite(uid, id) > 0) {
             documentMapper.adjustFavoriteCount(id, 1);
         }
         return R.ok();
     }
 
     @DeleteMapping("/documents/{id}/favorite")
-    @Transactional
     public R<Void> unfavorite(@PathVariable Long id) {
         requireDoc(id);
         long uid = SecurityUtils.userId();
-        if (socialMapper.isFavorited(uid, id)) {
+        if (socialMapper.unfavorite(uid, id) > 0) {
             documentMapper.adjustFavoriteCount(id, -1);
         }
-        socialMapper.unfavorite(uid, id);
         return R.ok();
     }
 
@@ -333,7 +330,7 @@ public class DocumentController {
                                                         @RequestParam(defaultValue = "10") long size) {
         long uid = SecurityUtils.userId();
         return R.ok(PageResult.of(
-                camel(socialMapper.selectFavorites(uid, (page - 1) * size, size)),
+                CamelUtil.camel(socialMapper.selectFavorites(uid, (page - 1) * size, size)),
                 socialMapper.countFavorites(uid), page, size));
     }
 
@@ -354,7 +351,7 @@ public class DocumentController {
 
     @GetMapping("/subscriptions")
     public R<List<Map<String, Object>>> subscriptions() {
-        return R.ok(camel(socialMapper.selectSubscriptions(SecurityUtils.userId())));
+        return R.ok(CamelUtil.camel(socialMapper.selectSubscriptions(SecurityUtils.userId())));
     }
 
     @GetMapping("/notifies")
@@ -362,7 +359,7 @@ public class DocumentController {
                                                        @RequestParam(defaultValue = "10") long size) {
         long uid = SecurityUtils.userId();
         return R.ok(PageResult.of(
-                camel(socialMapper.selectNotifies(uid, (page - 1) * size, size)),
+                CamelUtil.camel(socialMapper.selectNotifies(uid, (page - 1) * size, size)),
                 socialMapper.countNotifies(uid), page, size));
     }
 
@@ -510,22 +507,4 @@ public class DocumentController {
         return m;
     }
 
-    /** Map key 蛇形转驼峰 */
-    private static List<Map<String, Object>> camel(List<Map<String, Object>> rows) {
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (Map<String, Object> row : rows) {
-            Map<String, Object> m = new HashMap<>();
-            for (Map.Entry<String, Object> e : row.entrySet()) {
-                String[] parts = e.getKey().split("_");
-                StringBuilder key = new StringBuilder(parts[0]);
-                for (int i = 1; i < parts.length; i++) {
-                    if (parts[i].isEmpty()) continue;
-                    key.append(Character.toUpperCase(parts[i].charAt(0))).append(parts[i].substring(1));
-                }
-                m.put(key.toString(), e.getValue());
-            }
-            out.add(m);
-        }
-        return out;
-    }
 }

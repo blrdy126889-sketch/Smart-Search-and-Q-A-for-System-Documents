@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.docqa.common.api.PageResult;
 import com.docqa.common.api.R;
+import com.docqa.common.util.CamelUtil;
 import com.docqa.common.util.SecurityUtils;
 import com.docqa.document.mapper.BizDocSocialMapper;
 import com.docqa.qa.mapper.BizQaMapper;
@@ -60,7 +61,7 @@ public class LogController {
             @RequestParam(defaultValue = "15") long size) {
         SecurityUtils.checkPerm("system:log:list");
         return R.ok(PageResult.of(
-                qaMapper.selectQaLogs((page - 1) * size, size),
+                CamelUtil.camel(qaMapper.selectQaLogs((page - 1) * size, size)),
                 qaMapper.countQaLogs(), page, size));
     }
 
@@ -70,7 +71,7 @@ public class LogController {
             @RequestParam(defaultValue = "15") long size) {
         SecurityUtils.checkPerm("system:log:list");
         return R.ok(PageResult.of(
-                socialMapper.selectAccessLogs((page - 1) * size, size),
+                CamelUtil.camel(socialMapper.selectAccessLogs((page - 1) * size, size)),
                 socialMapper.countAccessLogs(), page, size));
     }
 }

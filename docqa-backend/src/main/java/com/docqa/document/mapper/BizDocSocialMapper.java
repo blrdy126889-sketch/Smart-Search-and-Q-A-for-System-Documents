@@ -17,10 +17,10 @@ import java.util.Map;
 public interface BizDocSocialMapper extends BaseMapper<BizAccessLog> {
 
     @Insert("INSERT INTO biz_favorite(user_id, doc_id) VALUES(#{userId}, #{docId}) ON CONFLICT DO NOTHING")
-    void favorite(@Param("userId") Long userId, @Param("docId") Long docId);
+    int favorite(@Param("userId") Long userId, @Param("docId") Long docId);
 
     @Delete("DELETE FROM biz_favorite WHERE user_id = #{userId} AND doc_id = #{docId}")
-    void unfavorite(@Param("userId") Long userId, @Param("docId") Long docId);
+    int unfavorite(@Param("userId") Long userId, @Param("docId") Long docId);
 
     @Select("SELECT EXISTS(SELECT 1 FROM biz_favorite WHERE user_id = #{userId} AND doc_id = #{docId})")
     boolean isFavorited(@Param("userId") Long userId, @Param("docId") Long docId);

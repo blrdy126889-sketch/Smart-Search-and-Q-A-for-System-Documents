@@ -21,6 +21,10 @@ public interface BizCategoryMapper extends BaseMapper<BizCategory> {
     @Select("SELECT role_id FROM biz_category_perm WHERE category_id = #{categoryId}")
     List<Long> selectPermRoleIds(@Param("categoryId") Long categoryId);
 
+    /** 一次取全部分类授权映射（树构建防 N+1） */
+    @Select("SELECT category_id, role_id FROM biz_category_perm")
+    List<java.util.Map<String, Object>> selectAllPerms();
+
     @Update("UPDATE biz_category c SET doc_count = (" +
             "SELECT count(*) FROM biz_document d WHERE d.category_id = c.id AND d.deleted_at IS NULL) " +
             "WHERE c.id = #{categoryId}")

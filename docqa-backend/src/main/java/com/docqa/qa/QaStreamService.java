@@ -46,6 +46,13 @@ public class QaStreamService {
     @Async("qaStreamExecutor")
     public void stream(SseEmitter emitter, String sessionId, long userId, String question, Long qaLogId,
                        List<Long> roleIds) {
+        // SSE 心跳：15s 注释帧防止中间网关空闲断连（仅真实 LLM 长生成时有意义）
+        java.util.concurrent.ScheduledExecutorService heartbeat = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+        heartbeat.scheduleAtFixedRate(() -> {
+            try {
+                emitter.send(SseEmitter.event().comment("ping"));
+            } catch (Exception ignore) { }
+        }, 15, 15, java.util.concurrent.TimeUnit.SECONDS);
         long start = System.currentTimeMillis();
         AtomicInteger firstTokenMs = new AtomicInteger(0);
         StringBuilder answerBuf = new StringBuilder();
@@ -138,6 +145,8 @@ public class QaStreamService {
                 send(emitter, "error", Map.of("code", 500, "msg", "生成失败：" + e.getMessage()));
             } catch (Exception ignore) { }
             emitter.complete();
+        } finally {
+            heartbeat.shutdownNow();
         }
     }
 

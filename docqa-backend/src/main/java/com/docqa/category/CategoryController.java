@@ -35,15 +35,21 @@ public class CategoryController {
     public R<List<Map<String, Object>>> tree() {
         List<BizCategory> all = categoryMapper.selectList(
                 new LambdaQueryWrapper<BizCategory>().orderByAsc(BizCategory::getSortOrder));
+        // 单次批量取全部分类授权（防 N+1 查询）
+        Map<Long, List<Long>> permMap = new HashMap<>();
+        for (Map<String, Object> row : categoryMapper.selectAllPerms()) {
+            permMap.computeIfAbsent(((Number) row.get("category_id")).longValue(),
+                    k -> new ArrayList<>()).add(((Number) row.get("role_id")).longValue());
+        }
         boolean isAdmin = SecurityUtils.roleCodes().contains("ADMIN");
         var roleIds = SecurityUtils.roleIds();
         List<BizCategory> visible = isAdmin ? all : all.stream()
-                .filter(c -> categoryMapper.selectPermRoleIds(c.getId()).stream().anyMatch(roleIds::contains))
+                .filter(c -> permMap.getOrDefault(c.getId(), List.of()).stream().anyMatch(roleIds::contains))
                 .toList();
-        return R.ok(buildTree(visible, 0L));
+        return R.ok(buildTree(visible, 0L, permMap));
     }
 
-    private List<Map<String, Object>> buildTree(List<BizCategory> all, Long parentId) {
+    private List<Map<String, Object>> buildTree(List<BizCategory> all, Long parentId, Map<Long, List<Long>> permMap) {
         List<Map<String, Object>> tree = new ArrayList<>();
         for (BizCategory c : all) {
             if (!parentId.equals(c.getParentId())) continue;
@@ -53,8 +59,8 @@ public class CategoryController {
             node.put("categoryName", c.getCategoryName());
             node.put("sortOrder", c.getSortOrder());
             node.put("docCount", c.getDocCount());
-            node.put("authorizedRoleIds", categoryMapper.selectPermRoleIds(c.getId()));
-            node.put("children", buildTree(all, c.getId()));
+            node.put("authorizedRoleIds", permMap.getOrDefault(c.getId(), List.of()));
+            node.put("children", buildTree(all, c.getId(), permMap));
             tree.add(node);
         }
         return tree;

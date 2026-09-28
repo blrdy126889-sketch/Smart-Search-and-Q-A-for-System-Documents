@@ -33,7 +33,7 @@ public interface BizDocChunkMapper extends BaseMapper<BizDocChunk> {
                                                        @Param("roleIds") List<Long> roleIds,
                                                        @Param("limit") int limit);
 
-    @Select("SELECT ts_headline('simple', #{content}, to_tsquery('simple', #{tsQuery}), 'StartSel=<b>, StopSel=</b>')")
+    @Select("SELECT ts_headline('simple', #{content}, to_tsquery('simple', #{tsQuery}), 'StartSel=<b>, StopSel=</b>, MaxWords=60, MinWords=20')")
     String headline(@Param("content") String content, @Param("tsQuery") String tsQuery);
 
     /** 回填向量（TEXT 兼容存储，绕开 Wrapper 不走 TypeHandler 的限制） */

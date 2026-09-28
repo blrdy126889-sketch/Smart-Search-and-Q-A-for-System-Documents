@@ -172,14 +172,25 @@ public class HybridSearchService {
 
         int from = (int) Math.min((page - 1) * size, fused.size());
         int to = (int) Math.min(from + size, fused.size());
+        // BM25 命中词集合（应用层子串高亮；simple parser 对无空格中文原文无法定位词形，
+        // DB 端 ts_headline 与 tsv 的分词输入不一致，故改为应用层实现）
+        Set<String> keywords = new java.util.HashSet<>();
+        if (tsQuery != null && !tsQuery.isBlank()) {
+            for (String kw : tsQuery.split("\\|")) {
+                String w = kw.trim();
+                if (w.length() >= 2) keywords.add(escapeHtml(w));
+            }
+        }
         List<Map<String, Object>> records = new ArrayList<>();
         for (Map<String, Object> hit : fused.subList(from, to)) {
-            String content = String.valueOf(hit.get("content"));
+            // XSS 防护：文档内容可能含 HTML，先转义再进入响应
+            String content = escapeHtml(String.valueOf(hit.get("content")));
             String snippet = content.length() > 240 ? content.substring(0, 240) + "…" : content;
-            if (tsQuery != null && !tsQuery.isBlank()
-                    && ((List<?>) hit.get("hitTypes")).contains("BM25")) {
-                String hl = chunkMapper.headline(content, tsQuery);
-                if (hl != null && !hl.isBlank()) snippet = hl;
+            boolean bm25Hit = ((List<?>) hit.get("hitTypes")).contains("BM25");
+            if (bm25Hit) {
+                for (String kw : keywords) {
+                    snippet = snippet.replace(kw, "<b>" + kw + "</b>");
+                }
             }
             Map<String, Object> vo = new HashMap<>();
             vo.put("docId", ((Number) hit.get("doc_id")).longValue());
@@ -196,6 +207,12 @@ public class HybridSearchService {
         result.put("total", fused.size());
         result.put("tookMs", tookMs);
         return result;
+    }
+
+    private String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     /** 异步/非Web线程下安全取角色（无上下文返回空，由调用方兜底） */
