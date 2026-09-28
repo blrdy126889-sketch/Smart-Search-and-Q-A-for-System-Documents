@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 @Component
 public class TxtParser implements Parser {
 
-    private static final Pattern HEADING = Pattern.compile("^(#{1,3})\\s+(.+)$|^(第[一二三四五六七八九十百]+[章节条][、\\s].*)$");
+    private static final Pattern HEADING = Pattern.compile("^(#{1,3})\\s+(.+)$|^(第[一二三四五六七八九十百]+[章节][、\\s].*)$");
 
     @Override
     public boolean supports(String sourceType) {

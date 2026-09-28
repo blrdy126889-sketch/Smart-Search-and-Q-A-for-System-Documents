@@ -7,7 +7,7 @@
         VALUES
         <foreach collection="chunks" item="c" separator=",">
             (#{c.docId}, #{c.versionId}, #{c.chunkIndex}, #{c.content}, #{c.headingPath},
-             #{c.pageNo}, #{c.charCount}, to_tsvector('simple', #{tsvTexts[${index}]}))
+             #{c.pageNo}, #{c.charCount}, to_tsvector('simple', #{c.tsvText}))
         </foreach>
     </insert>
 

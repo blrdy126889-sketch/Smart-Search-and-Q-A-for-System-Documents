@@ -34,4 +34,8 @@ public class BizDocChunk {
 
     private Boolean isActive;
     private OffsetDateTime createdAt;
+
+    /** 切片分词文本（仅入库时使用，不映射数据库列） */
+    @TableField(exist = false)
+    private String tsvText;
 }

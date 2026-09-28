@@ -53,7 +53,9 @@ public class QaController {
         qaMapper.insertQaLog(qaLog);
 
         SseEmitter emitter = new SseEmitter(180_000L);
-        streamService.stream(emitter, sessionId, userId, question, qaLog.getId());
+        // 请求线程内取角色（异步线程无 Sa-Token 上下文）
+        List<Long> roleIds = SecurityUtils.roleIds().isEmpty() ? List.of(4L) : SecurityUtils.roleIds();
+        streamService.stream(emitter, sessionId, userId, question, qaLog.getId(), roleIds);
         return emitter;
     }
 

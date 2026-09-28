@@ -23,14 +23,14 @@ public interface BizStatsMapper {
     @Select("SELECT count(*) FROM biz_doc_version WHERE index_status = 'FAILED'")
     long failedIndexCount();
 
-    @Select("SELECT question, count(*) AS count FROM biz_qa_log " +
-            "WHERE created_at >= now() - (#{days} || ' days')::interval AND status = 'DONE' " +
+    @Select("SELECT LEFT(question, 24) AS question, count(*) AS count FROM biz_qa_log " +
+            "WHERE created_at >= now() - make_interval(days => #{days}) AND status = 'DONE' " +
             "GROUP BY LEFT(question, 24) ORDER BY count DESC LIMIT #{topN}")
     List<Map<String, Object>> hotQuestions(@Param("days") int days, @Param("topN") int topN);
 
     @Select("SELECT d.id AS doc_id, d.title AS doc_title, count(a.id) AS quote_count FROM biz_document d " +
             "JOIN biz_access_log a ON a.doc_id = d.id AND a.action = 'QUOTE' " +
-            "WHERE d.deleted_at IS NULL AND a.created_at >= now() - (#{days} || ' days')::interval " +
+            "WHERE d.deleted_at IS NULL AND a.created_at >= now() - make_interval(days => #{days}) " +
             "GROUP BY d.id, d.title ORDER BY quote_count DESC LIMIT #{topN}")
     List<Map<String, Object>> docQuotes(@Param("days") int days, @Param("topN") int topN);
 

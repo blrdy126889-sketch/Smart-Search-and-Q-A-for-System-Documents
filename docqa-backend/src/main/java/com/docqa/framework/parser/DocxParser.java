@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 @Component
 public class DocxParser implements Parser {
 
-    private static final Pattern HEADING = Pattern.compile("^(第[一二三四五六七八九十百]+[章节条][、\\s].{0,60})$|^([一二三四五六七八九十]+[、.].{0,60})$");
+    private static final Pattern HEADING = Pattern.compile("^(第[一二三四五六七八九十百]+[章节][、\\s].{0,60})$|^([一二三四五六七八九十]+[、.].{0,60})$");
 
     @Override
     public boolean supports(String sourceType) {

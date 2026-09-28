@@ -3,11 +3,13 @@ package com.docqa.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.concurrent.Executor;
 
 /**
- * 异步线程池：入库管线 / SSE 推流 / 检索并行 分池隔离
+ * 异步线程池 + 编程式事务模板
  */
 @Configuration
 public class AsyncConfig {
@@ -43,5 +45,11 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("search-");
         executor.initialize();
         return executor;
+    }
+
+    /** 编程式事务模板（上传等短事务：提交后再触发异步） */
+    @Bean
+    public TransactionTemplate transactionTemplate(PlatformTransactionManager txManager) {
+        return new TransactionTemplate(txManager);
     }
 }

@@ -69,3 +69,6 @@ em.hl, .highlight { color: var(--primary); font-style: normal; font-weight: 600;
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: #cdd5e0; border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* BM25 关键词命中高亮（ts_headline <b> 标签） */
+.snippet b, .md-body b { color: var(--primary); font-style: normal; font-weight: 700; }

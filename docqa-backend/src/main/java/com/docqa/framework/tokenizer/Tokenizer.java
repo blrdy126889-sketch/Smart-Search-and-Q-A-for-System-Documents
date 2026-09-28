@@ -31,7 +31,7 @@ public class Tokenizer {
         for (String t : cleaned.split("\\s+")) {
             if (!t.isBlank() && !t.matches("[\"':*&]+")) kept.add(t);
         }
-        return String.join(" & ", kept);
+        return String.join(" | ", kept);
     }
 
     private static boolean isCjkPunctFree(String w) {

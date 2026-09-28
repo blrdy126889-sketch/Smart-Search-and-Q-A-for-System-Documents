@@ -44,7 +44,8 @@ public class QaStreamService {
             4. 涉及流程审批的问题，按资料中的顺序逐步说明。""";
 
     @Async("qaStreamExecutor")
-    public void stream(SseEmitter emitter, String sessionId, long userId, String question, Long qaLogId) {
+    public void stream(SseEmitter emitter, String sessionId, long userId, String question, Long qaLogId,
+                       List<Long> roleIds) {
         long start = System.currentTimeMillis();
         AtomicInteger firstTokenMs = new AtomicInteger(0);
         StringBuilder answerBuf = new StringBuilder();
@@ -56,7 +57,7 @@ public class QaStreamService {
             List<Map<String, Object>> topK = new ArrayList<>();
             try {
                 Map<String, Object> searchResult = searchService.search(question, "HYBRID", null, 1,
-                        properties.getSearch().getQaTopK());
+                        properties.getSearch().getQaTopK(), roleIds);
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> recs = (List<Map<String, Object>>) searchResult.getOrDefault("records", List.of());
                 topK = recs;

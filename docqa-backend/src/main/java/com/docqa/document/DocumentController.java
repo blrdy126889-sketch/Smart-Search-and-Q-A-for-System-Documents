@@ -48,6 +48,7 @@ public class DocumentController {
     private final BizCategoryMapper categoryMapper;
     private final StorageClient storageClient;
     private final IngestPipeline ingestPipeline;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     private static final Set<String> ALLOWED_EXT = Set.of("txt", "doc", "docx", "pdf");
     private static final long MAX_SIZE = 50L * 1024 * 1024;
@@ -56,7 +57,6 @@ public class DocumentController {
 
     @PostMapping("/documents/upload")
     @OpLog(module = "文档管理", operation = "上传文档")
-    @Transactional
     public R<Map<String, Object>> upload(@RequestParam("file") MultipartFile file,
                                          @RequestParam Long categoryId,
                                          @RequestParam(required = false) String docCode,
@@ -81,9 +81,11 @@ public class DocumentController {
         doc.setSourceType(sourceType);
         doc.setFileSize(file.getSize());
         doc.setOwnerId(SecurityUtils.userId());
-        documentMapper.insert(doc);
-
-        BizDocVersion version = insertVersion(doc, filePath, file, changeLog);
+        // 编程式短事务：提交后才触发异步入库（避免异步线程读不到未提交记录）
+        BizDocVersion version = transactionTemplate.execute(status -> {
+            documentMapper.insert(doc);
+            return insertVersion(doc, filePath, file, changeLog);
+        });
         ingestPipeline.ingestAsync(version, sourceType);
         categoryMapper.refreshDocCount(categoryId);
 
@@ -98,7 +100,6 @@ public class DocumentController {
 
     @PostMapping("/documents/{id}/versions")
     @OpLog(module = "文档管理", operation = "上传新版本")
-    @Transactional
     public R<Map<String, Object>> uploadVersion(@PathVariable Long id,
                                                 @RequestParam("file") MultipartFile file,
                                                 @RequestParam(required = false) String changeLog) {
@@ -112,7 +113,7 @@ public class DocumentController {
         } catch (Exception e) {
             throw new BizException("文件保存失败：" + e.getMessage());
         }
-        BizDocVersion version = insertVersion(doc, filePath, file, changeLog);
+        BizDocVersion version = transactionTemplate.execute(status -> insertVersion(doc, filePath, file, changeLog));
         ingestPipeline.ingestAsync(version, sourceType);
 
         Map<String, Object> data = new HashMap<>();
@@ -378,8 +379,9 @@ public class DocumentController {
     public R<Void> reindex(@PathVariable Long id) {
         SecurityUtils.checkPerm("doc:edit");
         BizDocument doc = requireDoc(id);
-        BizDocVersion version = versionMapper.selectById(doc.getCurrentVersionId());
-        if (version == null) throw new BizException("文档暂无版本");
+        BizDocVersion version = versionMapper.selectList(new LambdaQueryWrapper<BizDocVersion>()
+                .eq(BizDocVersion::getDocId, id).orderByDesc(BizDocVersion::getId).last("LIMIT 1"))
+                .stream().findFirst().orElseThrow(() -> new BizException("文档暂无版本"));
         versionMapper.casIndexStatus(version.getId(), version.getIndexStatus(), "PENDING", null, 0);
         version.setIndexStatus("PENDING");
         ingestPipeline.ingestAsync(version, doc.getSourceType());

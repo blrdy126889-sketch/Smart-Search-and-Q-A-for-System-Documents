@@ -53,6 +53,10 @@ public class IngestPipeline {
 
     public void ingest(BizDocVersion version, String sourceType) {
         Long versionId = version.getId();
+        // 兜底：等待上传主事务提交（异步触发可能早于 commit）
+        for (int i = 0; i < 20 && versionMapper.selectById(versionId) == null; i++) {
+            try { Thread.sleep(300); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
+        }
 
         // ① PARSING
         if (!cas(versionId, "PENDING", "PARSING") && !"PARSING".equals(currentStatus(versionId))) {
@@ -78,7 +82,6 @@ public class IngestPipeline {
             return;
         }
         List<BizDocChunk> chunks = new ArrayList<>();
-        List<String> tsvTexts = new ArrayList<>();
         for (int i = 0; i < textChunks.size(); i++) {
             Chunker.TextChunk tc = textChunks.get(i);
             BizDocChunk chunk = new BizDocChunk();
@@ -90,13 +93,12 @@ public class IngestPipeline {
             chunk.setPageNo(tc.pageNo());
             chunk.setCharCount(tc.content() == null ? 0 : tc.content().length());
             chunk.setIsActive(true);
+            chunk.setTsvText(Tokenizer.tokenize((tc.headingPath() == null ? "" : tc.headingPath() + " ") + tc.content()));
             chunks.add(chunk);
-            tsvTexts.add(Tokenizer.tokenize(tc.headingPath() + " " + tc.content()));
         }
         chunkMapper.deleteByVersionId(versionId);
         for (int i = 0; i < chunks.size(); i += 100) {
-            chunkMapper.batchInsertWithTsv(chunks.subList(i, Math.min(chunks.size(), i + 100)),
-                    tsvTexts.subList(i, Math.min(tsvTexts.size(), i + 100)));
+            chunkMapper.batchInsertWithTsv(chunks.subList(i, Math.min(chunks.size(), i + 100)));
         }
 
         // ③ EMBEDDING（外部调用不在事务内；批次重试）
@@ -148,9 +150,10 @@ public class IngestPipeline {
     }
 
     private void updateChunkEmbedding(Long chunkId, List<Double> vector) {
-        chunkMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<BizDocChunk>()
-                .eq(BizDocChunk::getId, chunkId)
-                .set(BizDocChunk::getEmbedding, vector));
+        String vecText = vector.stream()
+                .map(v -> String.format("%.6f", v))
+                .collect(java.util.stream.Collectors.joining(",", "[", "]"));
+        chunkMapper.updateChunkEmbeddingText(chunkId, vecText);
     }
 
     private void generateSummary(Long versionId, String fullText) {

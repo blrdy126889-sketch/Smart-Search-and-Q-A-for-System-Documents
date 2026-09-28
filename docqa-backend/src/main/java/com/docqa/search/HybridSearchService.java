@@ -35,6 +35,12 @@ public class HybridSearchService {
     private Executor searchExecutor;
 
     public Map<String, Object> search(String q, String mode, Long categoryId, long page, long size) {
+        return search(q, mode, categoryId, page, size, null);
+    }
+
+    /** roleIds 显式传入（异步线程无 Sa-Token 上下文时由调用方在请求线程取好） */
+    public Map<String, Object> search(String q, String mode, Long categoryId, long page, long size,
+                                      List<Long> callerRoleIds) {
         long start = System.currentTimeMillis();
         String trimmed = sanitize(q);
         Map<String, Object> result = new HashMap<>();
@@ -46,7 +52,8 @@ public class HybridSearchService {
             result.put("tookMs", 0);
             return result;
         }
-        final List<Long> roleIds = SecurityUtils.roleIds().isEmpty() ? List.of(4L) : SecurityUtils.roleIds();
+        List<Long> fromCtx = callerRoleIds != null ? callerRoleIds : safeRoleIds();
+        final List<Long> roleIds = fromCtx.isEmpty() ? List.of(4L) : fromCtx;
 
         String tsQuery = Tokenizer.sanitizeForTsQuery(Tokenizer.tokenize(trimmed));
         boolean useKeyword = !"SEMANTIC".equalsIgnoreCase(mode) && !tsQuery.isBlank();
@@ -189,6 +196,15 @@ public class HybridSearchService {
         result.put("total", fused.size());
         result.put("tookMs", tookMs);
         return result;
+    }
+
+    /** 异步/非Web线程下安全取角色（无上下文返回空，由调用方兜底） */
+    private List<Long> safeRoleIds() {
+        try {
+            return SecurityUtils.roleIds();
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     private String sanitize(String q) {
