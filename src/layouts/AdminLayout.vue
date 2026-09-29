@@ -43,17 +43,28 @@ const userStore = useUserStore()
 
 <style scoped>
 .admin-layout { height: 100%; }
-.aside { background: #fff; border-right: 1px solid #eef0f5; display: flex; flex-direction: column; }
-.aside-brand { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 20px; font-weight: 600; cursor: pointer; border-bottom: 1px solid #f0f2f7; }
+.aside { background: var(--bg-card); border-right: 1px solid var(--border-light); display: flex; flex-direction: column; }
+.aside-brand { height: 60px; display: flex; align-items: center; gap: 11px; padding: 0 20px; font-weight: 700; cursor: pointer; border-bottom: 1px solid var(--border-light); letter-spacing: .3px; }
 .logo {
-  width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, #4f6ef7, #7c9bff);
+  width: 32px; height: 32px; border-radius: 10px; background: var(--primary-grad);
   color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px;
+  box-shadow: 0 4px 10px rgba(59,91,253,.28);
 }
 .menu { border-right: none; flex: 1; }
-.header { background: #fff; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eef0f5; }
-.crumb { color: #7a8699; font-size: 13px; }
+.menu :deep(.el-menu-item) { border-radius: 10px; margin: 3px 10px; height: 44px; transition: all .22s var(--ease); }
+.menu :deep(.el-menu-item.is-active) { background: var(--primary-grad); color: #fff; box-shadow: 0 4px 12px rgba(59,91,253,.26); }
+.menu :deep(.el-menu-item:hover) { background: var(--primary-light); }
+.header {
+  background: rgba(255,255,255,.86); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light);
+}
+.crumb { color: var(--text-sub); font-size: 13px; }
 .header-right { display: flex; align-items: center; gap: 16px; }
-.back-portal { color: var(--primary); text-decoration: none; font-size: 13px; }
-.user { font-size: 14px; color: #2c3e50; }
-.main { background: #f5f7fb; }
+.back-portal {
+  color: var(--primary); text-decoration: none; font-size: 13px; padding: 6px 13px;
+  border-radius: 18px; border: 1px solid #dbe1fe; background: #fafbff; transition: all .22s var(--ease);
+}
+.back-portal:hover { background: var(--primary-light); }
+.user { font-size: 14px; color: var(--text-main); font-weight: 500; }
+.main { background: var(--bg-page); }
 </style>

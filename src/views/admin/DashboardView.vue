@@ -112,7 +112,7 @@ async function renderTrend() {
 </script>
 
 <style scoped>
-.cards { display: flex; gap: 14px; margin-bottom: 16px; }
-.stat { flex: 1; text-align: center; }
-.stat .num { font-size: 26px; font-weight: 700; }
+.cards { display: flex; gap: 16px; margin-bottom: 16px; }
+.stat { flex: 1; text-align: center; padding: 20px 12px; }
+.stat .num { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
 </style>

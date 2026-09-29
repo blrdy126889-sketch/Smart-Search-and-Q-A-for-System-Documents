@@ -23,7 +23,7 @@
     <div v-if="loading" class="page-card"><el-skeleton :rows="6" animated /></div>
 
     <template v-else-if="result && result.records.length">
-      <div v-for="hit in result.records" :key="hit.chunkId" class="page-card hit" @click="goDetail(hit)">
+      <div v-for="hit in result.records" :key="hit.chunkId" class="page-card hit-card" @click="goDetail(hit)">
         <div class="hit-head">
           <span class="doc-title">{{ hit.docTitle }}</span>
           <span class="hit-types">
@@ -32,6 +32,7 @@
         </div>
         <div v-if="hit.headingPath" class="text-sub path">📍 {{ hit.headingPath }}</div>
         <div class="snippet" v-html="hit.snippet"></div>
+        <div class="score-bar"><i :style="{ width: (hit.score * 100).toFixed(1) + '%' }"></i></div>
         <div class="text-sub score">相关度 {{ (hit.score * 100).toFixed(1) }}%</div>
       </div>
       <div class="pager">
@@ -92,15 +93,14 @@ function goDetail(hit: any) {
 
 <style scoped>
 .search-box { display: flex; gap: 12px; }
+.search-box .el-input :deep(.el-input__wrapper) { padding: 8px 16px; box-shadow: 0 2px 12px rgba(29,33,41,.06); }
 .filters { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
-.took { margin-left: auto; }
-.hit { cursor: pointer; transition: all .2s; }
-.hit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(79,110,247,.15); }
-.hit-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.doc-title { font-size: 16px; font-weight: 600; color: var(--text-main); }
+.took { margin-left: auto; font-variant-numeric: tabular-nums; }
+.hit { cursor: pointer; }
+.hit-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.doc-title { font-size: 15.5px; }
 .path { margin-bottom: 8px; }
-.snippet { font-size: 14px; line-height: 1.8; color: #4a5568; }
-.score { margin-top: 8px; }
+.score { margin-top: 8px; font-variant-numeric: tabular-nums; }
 .empty { min-height: 240px; display: flex; align-items: center; justify-content: center; }
-.pager { display: flex; justify-content: center; padding: 12px 0; }
+.pager { display: flex; justify-content: center; padding: 14px 0; }
 </style>

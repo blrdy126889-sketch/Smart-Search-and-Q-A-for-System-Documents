@@ -87,18 +87,20 @@ function goAsk(question: string) {
 </script>
 
 <style scoped>
-.hero { text-align: center; padding: 48px 0 32px; }
-.hero h1 { margin-bottom: 8px; }
-.search-bar { display: flex; gap: 12px; max-width: 640px; margin: 24px auto 0; }
+.hero { text-align: center; padding: 54px 0 36px; animation: fadeUp .5s var(--ease) both; }
+.hero h1 { margin-bottom: 10px; font-size: 28px; font-weight: 700; }
+.hero .text-sub { font-size: 14px; }
+.search-bar { display: flex; gap: 12px; max-width: 660px; margin: 28px auto 0; }
 .search-bar .el-input { flex: 1; }
+.search-bar .el-input :deep(.el-input__wrapper) { box-shadow: 0 4px 20px rgba(29,33,41,.07); padding: 6px 16px; }
 .cards { display: flex; gap: 16px; margin-bottom: 16px; }
-.stat { flex: 1; text-align: center; }
-.stat .num { font-size: 28px; font-weight: 700; color: var(--primary); }
-.hot-item { display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-radius: 8px; cursor: pointer; }
-.hot-item:hover { background: var(--primary-light); }
-.hot-item .rank { width: 22px; height: 22px; border-radius: 6px; background: #edf0f5; color: #7a8699; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-.hot-item .rank.top { background: var(--primary); color: #fff; }
+.stat { flex: 1; text-align: center; padding: 20px 12px; }
+.stat .num { font-size: 30px; font-weight: 800; background: var(--primary-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-variant-numeric: tabular-nums; }
+.hot-item { display: flex; align-items: center; gap: 12px; padding: 11px 10px; border-radius: 10px; cursor: pointer; transition: all .22s var(--ease); }
+.hot-item:hover { background: var(--primary-light); transform: translateX(3px); }
+.hot-item .rank { width: 22px; height: 22px; border-radius: 7px; background: #eef0f5; color: #86909c; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.hot-item .rank.top { background: var(--primary-grad); color: #fff; box-shadow: 0 3px 8px rgba(59,91,253,.28); }
 .hot-item .q { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hot-item .count { font-size: 12px; color: var(--text-sub); }
+.hot-item .count { font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
 .empty { text-align: center; padding: 24px 0; }
 </style>

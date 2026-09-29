@@ -215,36 +215,32 @@ function scrollToBottom() {
 </script>
 
 <style scoped>
-.chat-page { display: flex; gap: 14px; height: calc(100vh - 108px); }
-.session-panel { width: 230px; background: #fff; border-radius: 12px; padding: 14px; box-shadow: var(--card-shadow); display: flex; flex-direction: column; }
+.chat-page { display: flex; gap: 14px; height: calc(100vh - 110px); }
+.session-panel { width: 240px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 14px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
 .new-chat { width: 100%; margin-bottom: 12px; }
 .session-list { flex: 1; overflow-y: auto; }
-.session-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #4a5568; }
+.session-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; color: #4e5969; transition: all .22s var(--ease); }
 .session-item:hover { background: var(--primary-light); }
 .session-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
 .session-item .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .session-item .del { visibility: hidden; color: var(--danger); }
 .session-item:hover .del { visibility: visible; }
 
-.chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; border-radius: 12px; box-shadow: var(--card-shadow); overflow: hidden; }
-.messages { flex: 1; overflow-y: auto; padding: 22px; }
+.chat-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+.messages { flex: 1; overflow-y: auto; padding: 26px 24px; background: linear-gradient(180deg, #fafbff 0%, #f6f7fb 100%); }
 .welcome { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.welcome .big { font-size: 44px; margin-bottom: 10px; }
-.suggest { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; max-width: 480px; justify-content: center; }
-.suggest-item { padding: 8px 16px; background: var(--primary-light); color: var(--primary); border-radius: 18px; font-size: 13px; cursor: pointer; }
-.suggest-item:hover { background: var(--primary); color: #fff; }
-.input-area { display: flex; gap: 12px; padding: 16px 20px; border-top: 1px solid #f0f2f7; }
+.welcome .big { font-size: 46px; margin-bottom: 12px; }
+.welcome h2 { font-size: 22px; font-weight: 700; }
+.suggest { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; max-width: 500px; justify-content: center; }
+.suggest-item { padding: 8px 18px; background: var(--bg-card); border: 1px solid #dbe1fe; color: var(--primary); border-radius: 20px; font-size: 13px; cursor: pointer; transition: all .22s var(--ease); }
+.suggest-item:hover { background: var(--primary-grad); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(59,91,253,.24); transform: translateY(-1px); }
+.input-area { display: flex; gap: 12px; padding: 16px 18px; border-top: 1px solid var(--border-light); background: var(--bg-card); }
+.input-area .el-input :deep(.el-input__wrapper) { padding: 8px 16px; }
 .msg-actions { margin-top: 6px; display: flex; gap: 4px; align-items: center; }
 .msg-actions :deep(.el-button.liked) { color: var(--primary); }
 .msg-actions :deep(.el-button.disliked) { color: var(--danger); }
 
-.source-panel { width: 300px; background: #fff; border-radius: 12px; box-shadow: var(--card-shadow); padding: 14px; display: flex; flex-direction: column; }
+.source-panel { width: 304px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 14px; display: flex; flex-direction: column; }
 .panel-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
 .source-panel .scroll { flex: 1; overflow-y: auto; }
-.source-card.hl { border-color: var(--primary); }
-.source-card .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.source-card .doc-title { flex: 1; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.source-card .path { margin-bottom: 6px; font-size: 12px; }
-.source-card .snippet { font-size: 12px; color: #4a5568; line-height: 1.6; max-height: 76px; overflow: hidden; }
-.source-card .score { font-size: 12px; margin-top: 6px; }
 </style>
