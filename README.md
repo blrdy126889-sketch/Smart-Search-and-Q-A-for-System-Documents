@@ -2,7 +2,7 @@
 
 > 基于 RAG 的企业制度知识中枢：文档全生命周期管理 + BM25/语义双路混合检索 + 流式智能问答（答案自动标注来源）
 
-![Vue](https://img.shields.io/badge/前端-Vue%203-42b883) ![SpringBoot](https://img.shields.io/badge/后端-Spring%20Boot%203-6db33f) ![PostgreSQL](https://img.shields.io/badge/数据库-PostgreSQL%2016-336791) ![RAG](https://img.shields.io/badge/架构-RAG-ff6f00) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Vue](https://img.shields.io/badge/前端-Vue%203-42b883) ![SpringBoot](https://img.shields.io/badge/后端-Spring%20Boot%203-6db33f) ![MySQL](https://img.shields.io/badge/数据库-MySQL%208-4479a1) ![RAG](https://img.shields.io/badge/架构-RAG-ff6f00) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## ✨ 功能特性
 
@@ -11,7 +11,7 @@
 | 场景 | 能力 |
 |---|---|
 | 📚 **知识库构建** | TXT/Word/PDF 上传 → 解析（PDFBox 按页/Tika 按节）→ 递归切片（500字/重叠80字）→ 批量向量化 → LLM 自动摘要；状态机 + 定时补偿保证入库可靠性 |
-| 🔎 **混合检索** | BM25 关键词（tsvector+GIN, ts_rank_cd）与 语义向量（余弦相似度）**双路并行召回**，RRF 融合排序，关键词命中高亮，支持混合/关键词/语义三模式切换 |
+| 🔎 **混合检索** | BM25 关键词（MySQL ngram FULLTEXT 相关性排序）与 语义向量（余弦相似度）**双路并行召回**，RRF 融合排序，关键词命中高亮，支持混合/关键词/语义三模式切换 |
 | 💬 **RAG 智能问答** | Top-K 切片注入上下文 → LLM 流式生成（**SSE 打字机效果**）→ 答案自动标注 `[n]` 来源 → 点击脚注跳转文档原文；无答案时明确声明，拒绝编造 |
 
 ### 管理能力
@@ -42,9 +42,9 @@
 └──────┬──────────────────────────────────┬───────────────┘
        │                                  │
 ┌──────▼───────────┐          ┌───────────▼───────────────┐
-│ PostgreSQL 16    │          │ 模型服务(可选)             │
+│ MySQL 8.0        │          │ 模型服务(可选)             │
 │ 关系数据 + 13表   │          │ 智谱 embedding-3 / GLM    │
-│ tsv全文+余弦向量  │          │ 或任意OpenAI兼容端点       │
+│ ngram全文+TEXT向量│          │ 或任意OpenAI兼容端点       │
 │ (Flyway自动迁移)  │          │ 或本地 vLLM/Ollama        │
 └──────────────────┘          └───────────────────────────┘
 ```
@@ -56,15 +56,15 @@
 ```bash
 git clone https://github.com/blrdy126889-sketch/Smart-Search-and-Q-A-for-System-Documents.git
 cd Smart-Search-and-Q-A-for-System-Documents/docqa-backend
-docker compose up -d        # pgvector + backend + frontend
+docker compose up -d        # mysql8 + backend + frontend
 # 前端: http://localhost:5173   后端: http://localhost:8080
 ```
 
 ### 方式二：本地开发
 
 ```bash
-# 1. 数据库（任意 PG16 实例，或 docker run pgvector/pgvector:pg16）
-createdb docqa
+# 1. 数据库（本地 MySQL 8.0，root 密码 2110851921，需开启 ngram：默认已支持）
+mysql -uroot -p2110851921 -e "CREATE DATABASE IF NOT EXISTS docqa DEFAULT CHARACTER SET utf8mb4;"
 
 # 2. 后端（Flyway 自动建表 + 内置账号）
 cd docqa-backend && mvn spring-boot:run
@@ -86,7 +86,7 @@ npm install && npm run dev   # vite 代理 /api → localhost:8080
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| DOCQA_DB_HOST / PORT / NAME / USER / PASSWORD | localhost/5432/docqa/docqa/docqa123 | PostgreSQL 连接 |
+| DOCQA_DB_HOST / PORT / NAME / USER / PASSWORD | localhost/3306/docqa/root/2110851921 | MySQL 8 连接 |
 | LLM_API_KEY | 空 | 大模型 Key；**为空自动降级 Mock 模式**（检索/流式问答链路照常可演示） |
 | LLM_BASE_URL / LLM_MODEL | 智谱 / glm-4-flash | 任意 OpenAI 兼容端点 |
 | EMBEDDING_API_KEY / EMBEDDING_BASE_URL / EMBEDDING_MODEL | 空 / 智谱 / embedding-3 | 向量服务，同为 OpenAI 兼容协议 |
@@ -124,7 +124,7 @@ GET  /stats/doc-quotes          文档引用热度 TOP
 
 ## 🔬 关键设计
 
-- **向量存储自适应**：优先 pgvector `vector(1024)`；无扩展环境自动降级 TEXT 存储 + 应用层余弦排序，行为一致（生产可平滑升级）
+- **向量存储**：TEXT 存储 + 应用层余弦排序（零扩展依赖）；迁移 PG+pgvector 可获得 HNSW 索引能力
 - **入库可靠性**：`PENDING→PARSING→CHUNKING→EMBEDDING→READY/FAILED` 状态机 + 乐观锁迁移 + 每 5 分钟补偿重试（幂等）
 - **版本瞬切**：发布新版本时旧切片 `is_active=false`，检索立即切换无脏数据
 - **六大短事务**：上传/切片/向量化/发布/问答收尾/删除，替代长事务

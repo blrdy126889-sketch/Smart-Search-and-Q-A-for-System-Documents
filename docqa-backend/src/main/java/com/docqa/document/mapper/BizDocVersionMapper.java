@@ -23,10 +23,10 @@ public interface BizDocVersionMapper extends BaseMapper<BizDocVersion> {
                        @Param("retryInc") int retryInc);
 
     @Select("SELECT * FROM biz_doc_version WHERE index_status IN ('PENDING','FAILED') " +
-            "AND updated_at < now() - interval '10 minutes' AND retry_count < 5")
+            "AND updated_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE) AND retry_count < 5")
     List<BizDocVersion> selectRetryCandidates();
 
-    @Select("SELECT 'v' || (COALESCE(MAX(SUBSTRING(version_no FROM '[0-9]+')::int), 0) + 1) || '.0' " +
+    @Select("SELECT CONCAT('v', COALESCE(MAX(CAST(REGEXP_SUBSTR(version_no, '[0-9]+') AS UNSIGNED)), 0) + 1, '.0') " +
             "FROM biz_doc_version WHERE doc_id = #{docId}")
     String nextVersionNo(@Param("docId") Long docId);
 }

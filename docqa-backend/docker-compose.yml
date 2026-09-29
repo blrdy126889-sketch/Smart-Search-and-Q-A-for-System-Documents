@@ -1,22 +1,23 @@
 version: "3.8"
 
 services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: docqa-postgres
+  mysql:
+    image: mysql:8.0
+    container_name: docqa-mysql
     environment:
-      POSTGRES_DB: docqa
-      POSTGRES_USER: docqa
-      POSTGRES_PASSWORD: docqa123
+      MYSQL_ROOT_PASSWORD: 2110851921
+      MYSQL_DATABASE: docqa
+      # ngram 全文检索（中文双字分词）
+      command: --ngram_token_size=2
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - mysqldata:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U docqa -d docqa"]
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-p2110851921"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 20
 
   backend:
     build:
@@ -24,14 +25,14 @@ services:
       dockerfile: Dockerfile
     container_name: docqa-backend
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
     environment:
-      DOCQA_DB_HOST: postgres
-      DOCQA_DB_PORT: 5432
+      DOCQA_DB_HOST: mysql
+      DOCQA_DB_PORT: 3306
       DOCQA_DB_NAME: docqa
-      DOCQA_DB_USER: docqa
-      DOCQA_DB_PASSWORD: docqa123
+      DOCQA_DB_USER: root
+      DOCQA_DB_PASSWORD: 2110851921
       # 未配置 Key 时自动降级 Mock 模式（演示可跑通全链路）
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
@@ -56,5 +57,5 @@ services:
       - backend
 
 volumes:
-  pgdata:
+  mysqldata:
   node_modules:

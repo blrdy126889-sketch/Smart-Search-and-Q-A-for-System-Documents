@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface BizCategoryMapper extends BaseMapper<BizCategory> {
 
-    @Insert("INSERT INTO biz_category_perm(category_id, role_id) VALUES(#{categoryId}, #{roleId}) ON CONFLICT DO NOTHING")
+    @Insert("INSERT IGNORE INTO biz_category_perm(category_id, role_id) VALUES(#{categoryId}, #{roleId})")
     void insertCategoryPerm(@Param("categoryId") Long categoryId, @Param("roleId") Long roleId);
 
     @Delete("DELETE FROM biz_category_perm WHERE category_id = #{categoryId}")

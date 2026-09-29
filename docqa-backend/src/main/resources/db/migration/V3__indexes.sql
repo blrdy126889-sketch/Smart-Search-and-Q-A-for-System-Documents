@@ -1,7 +1,5 @@
 -- =============================================================
--- V3: 检索索引（GIN 全文 + 状态部分索引）
--- 注：向量检索采用应用层余弦排序（兼容无 pgvector 环境）；
---     生产环境启用 pgvector 后可将 embedding 列升级 vector 类型并重建 HNSW 索引
+-- V3(MySQL): 补充索引（FULLTEXT ngram 已在 V2 内联；预留本文件用于后续索引演进）
 -- =============================================================
-CREATE INDEX IF NOT EXISTS idx_chunk_tsv ON biz_doc_chunk USING GIN(tsv);
-CREATE INDEX IF NOT EXISTS idx_qalog_answering ON biz_qa_log(status) WHERE status = 'ANSWERING';
+-- 检索词联想
+CREATE INDEX idx_access_query ON biz_access_log(query_text(64));

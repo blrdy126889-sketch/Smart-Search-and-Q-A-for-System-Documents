@@ -11,4 +11,4 @@ WORKDIR /app
 COPY --from=build /build/target/*.jar app.jar
 ENV TZ=Asia/Shanghai
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Dfile.encoding=UTF-8", "-jar", "app.jar"]

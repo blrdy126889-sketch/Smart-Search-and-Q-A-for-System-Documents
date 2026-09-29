@@ -3,44 +3,45 @@
 <mapper namespace="com.docqa.document.mapper.BizDocChunkMapper">
 
     <insert id="batchInsertWithTsv" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO biz_doc_chunk(doc_id, version_id, chunk_index, content, heading_path, page_no, char_count, tsv)
+        INSERT INTO biz_doc_chunk(doc_id, version_id, chunk_index, content, heading_path, page_no, char_count)
         VALUES
         <foreach collection="chunks" item="c" separator=",">
             (#{c.docId}, #{c.versionId}, #{c.chunkIndex}, #{c.content}, #{c.headingPath},
-             #{c.pageNo}, #{c.charCount}, to_tsvector('simple', #{c.tsvText}))
+             #{c.pageNo}, #{c.charCount})
         </foreach>
     </insert>
 
+    <!-- BM25 路：MySQL ngram FULLTEXT 自然语言模式（相关性即排序分） -->
     <select id="searchByKeyword" resultType="java.util.HashMap">
         SELECT c.id AS chunk_id, c.doc_id, c.version_id, c.chunk_index, c.content,
                c.heading_path, c.page_no, d.title AS doc_title,
-               ts_rank_cd(c.tsv, to_tsquery('simple', #{tsQuery}), 32) AS rank
+               MATCH(c.content) AGAINST(#{kw} IN NATURAL LANGUAGE MODE) AS rank_score
         FROM biz_doc_chunk c
         JOIN biz_document d ON d.id = c.doc_id
             AND d.status = 'PUBLISHED' AND d.deleted_at IS NULL
         LEFT JOIN biz_category_perm p ON p.category_id = d.category_id AND p.role_id IN
             <foreach collection="roleIds" item="rid" open="(" close=")" separator=",">#{rid}</foreach>
-        WHERE c.is_active = true
-          AND c.tsv IS NOT NULL
-          AND c.tsv @@ to_tsquery('simple', #{tsQuery})
+        WHERE c.is_active = 1
+          AND MATCH(c.content) AGAINST(#{kw} IN NATURAL LANGUAGE MODE) > 0
         <if test="categoryId != null">
           AND d.category_id = #{categoryId}
         </if>
           AND p.category_id IS NOT NULL
-        ORDER BY rank DESC
+        ORDER BY rank_score DESC
         LIMIT #{limit}
     </select>
 
+    <!-- 向量路候选：同构权限过滤，余弦排序在应用层 -->
     <select id="searchByVectorCandidates" resultType="java.util.HashMap">
         SELECT c.id AS chunk_id, c.doc_id, c.version_id, c.chunk_index, c.content,
                c.heading_path, c.page_no, d.title AS doc_title,
-               c.embedding AS embedding_text, 0.0 AS rank
+               c.embedding AS embedding_text, 0.0 AS rank_score
         FROM biz_doc_chunk c
         JOIN biz_document d ON d.id = c.doc_id
             AND d.status = 'PUBLISHED' AND d.deleted_at IS NULL
         LEFT JOIN biz_category_perm p ON p.category_id = d.category_id AND p.role_id IN
             <foreach collection="roleIds" item="rid" open="(" close=")" separator=",">#{rid}</foreach>
-        WHERE c.is_active = true
+        WHERE c.is_active = 1
           AND c.embedding IS NOT NULL
         <if test="categoryId != null">
           AND d.category_id = #{categoryId}

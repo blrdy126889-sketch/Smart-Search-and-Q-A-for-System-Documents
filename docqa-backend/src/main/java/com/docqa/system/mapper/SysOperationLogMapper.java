@@ -10,7 +10,7 @@ public interface SysOperationLogMapper extends BaseMapper<SysOperationLog> {
     @Insert("INSERT INTO sys_operation_log(user_id, username, module, operation, request_method, request_path, " +
             "params, result_code, error_msg, ip, cost_ms) " +
             "VALUES(#{userId}, #{username}, #{module}, #{operation}, #{requestMethod}, #{requestPath}, " +
-            "#{params}::jsonb, #{resultCode}, #{errorMsg}, #{ip}, #{costMs})")
+            "#{params}, #{resultCode}, #{errorMsg}, #{ip}, #{costMs})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insertLog(SysOperationLog log);
 }

@@ -12,7 +12,7 @@ import java.util.Map;
 
 public interface SysUserMapper extends BaseMapper<SysUser> {
 
-    @Insert("INSERT INTO sys_user_role(user_id, role_id) VALUES(#{userId}, #{roleId}) ON CONFLICT DO NOTHING")
+    @Insert("INSERT IGNORE INTO sys_user_role(user_id, role_id) VALUES(#{userId}, #{roleId})")
     void insertUserRole(@Param("userId") Long userId, @Param("roleId") Long roleId);
 
     @Delete("DELETE FROM sys_user_role WHERE user_id = #{userId}")

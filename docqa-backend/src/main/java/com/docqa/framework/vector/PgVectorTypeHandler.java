@@ -26,7 +26,7 @@ public class PgVectorTypeHandler extends BaseTypeHandler<List<Double>> {
         String vectorStr = parameter.stream()
                 .map(v -> String.format("%.6f", v))
                 .collect(Collectors.joining(",", "[", "]"));
-        ps.setObject(i, vectorStr);
+        ps.setString(i, vectorStr);
     }
 
     @Override

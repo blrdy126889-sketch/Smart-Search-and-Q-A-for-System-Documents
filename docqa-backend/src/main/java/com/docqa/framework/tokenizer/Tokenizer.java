@@ -23,16 +23,6 @@ public class Tokenizer {
                 .collect(Collectors.joining(" "));
     }
 
-    /** 过滤 to_tsquery 非法字符，生成 AND 连接的查询串 */
-    public static String sanitizeForTsQuery(String tokenized) {
-        if (tokenized == null) return "";
-        String cleaned = tokenized.replaceAll("[&|!()\\s]+", " ").trim();
-        List<String> kept = new ArrayList<>();
-        for (String t : cleaned.split("\\s+")) {
-            if (!t.isBlank() && !t.matches("[\"':*&]+")) kept.add(t);
-        }
-        return String.join(" | ", kept);
-    }
 
     private static boolean isCjkPunctFree(String w) {
         return w.matches("[\\u4e00-\\u9fa5a-zA-Z0-9]+");

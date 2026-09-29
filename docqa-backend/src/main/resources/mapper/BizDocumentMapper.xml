@@ -13,7 +13,7 @@
         LEFT JOIN sys_user u ON u.id = d.owner_id
         WHERE d.deleted_at IS NULL
         <if test="keyword != null and keyword != ''">
-            AND (d.title ILIKE '%' || #{keyword} || '%' OR d.doc_code ILIKE '%' || #{keyword} || '%')
+            AND (d.title LIKE CONCAT('%', #{keyword}, '%') OR d.doc_code LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         <if test="categoryId != null">
             AND d.category_id = #{categoryId}
@@ -28,7 +28,7 @@
     <select id="countDocPage" resultType="long">
         SELECT count(*) FROM biz_document d WHERE d.deleted_at IS NULL
         <if test="keyword != null and keyword != ''">
-            AND (d.title ILIKE '%' || #{keyword} || '%' OR d.doc_code ILIKE '%' || #{keyword} || '%')
+            AND (d.title LIKE CONCAT('%', #{keyword}, '%') OR d.doc_code LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         <if test="categoryId != null">
             AND d.category_id = #{categoryId}

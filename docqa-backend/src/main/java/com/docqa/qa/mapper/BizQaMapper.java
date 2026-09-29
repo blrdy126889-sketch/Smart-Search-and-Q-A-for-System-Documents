@@ -30,13 +30,13 @@ public interface BizQaMapper extends BaseMapper<BizQaLog> {
     int deleteSession(@Param("sessionId") String sessionId, @Param("userId") Long userId);
 
     @Insert("INSERT INTO biz_qa_log(session_id, user_id, question, model, status, sources) " +
-            "VALUES(#{sessionId}, #{userId}, #{question}, #{model}, 'ANSWERING', #{sources}::jsonb)")
+            "VALUES(#{sessionId}, #{userId}, #{question}, #{model}, 'ANSWERING', #{sources})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertQaLog(BizQaLog log);
 
     @Update("UPDATE biz_qa_log SET answer = #{answer}, status = #{status}, latency_ms = #{latencyMs}, " +
             "first_token_ms = #{firstTokenMs}, prompt_tokens = #{promptTokens}, " +
-            "completion_tokens = #{completionTokens}, sources = #{sources}::jsonb, updated_at = now() " +
+            "completion_tokens = #{completionTokens}, sources = #{sources}, updated_at = NOW() " +
             "WHERE id = #{id}")
     void finishQaLog(BizQaLog log);
 
@@ -47,7 +47,7 @@ public interface BizQaMapper extends BaseMapper<BizQaLog> {
     void updateFeedback(@Param("id") Long id, @Param("feedback") int feedback);
 
     @Select("SELECT role, content, sources, qa_id, feedback FROM (" +
-            "SELECT 'user' AS role, question AS content, NULL::jsonb AS sources, NULL::bigint AS qa_id, 0 AS feedback, created_at, id " +
+            "SELECT 'user' AS role, question AS content, NULL AS sources, NULL AS qa_id, 0 AS feedback, created_at, id " +
             "FROM biz_qa_log WHERE session_id = #{sessionId} " +
             "UNION ALL " +
             "SELECT 'assistant', answer, sources, id, feedback, created_at, id " +

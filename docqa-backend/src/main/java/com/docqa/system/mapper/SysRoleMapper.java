@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface SysRoleMapper extends BaseMapper<SysRole> {
 
-    @Insert("INSERT INTO sys_role_permission(role_id, permission_id) VALUES(#{roleId}, #{permId}) ON CONFLICT DO NOTHING")
+    @Insert("INSERT IGNORE INTO sys_role_permission(role_id, permission_id) VALUES(#{roleId}, #{permId})")
     void insertRolePerm(@Param("roleId") Long roleId, @Param("permId") Long permId);
 
     @Delete("DELETE FROM sys_role_permission WHERE role_id = #{roleId}")

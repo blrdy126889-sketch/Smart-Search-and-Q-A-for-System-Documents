@@ -20,7 +20,7 @@ public interface BizDocChunkMapper extends BaseMapper<BizDocChunk> {
 
     int batchInsertWithTsv(@Param("chunks") List<BizDocChunk> chunks);
 
-    List<Map<String, Object>> searchByKeyword(@Param("tsQuery") String tsQuery,
+    List<Map<String, Object>> searchByKeyword(@Param("kw") String kw,
                                               @Param("categoryId") Long categoryId,
                                               @Param("roleIds") List<Long> roleIds,
                                               @Param("limit") int limit);
@@ -32,9 +32,6 @@ public interface BizDocChunkMapper extends BaseMapper<BizDocChunk> {
     List<Map<String, Object>> searchByVectorCandidates(@Param("categoryId") Long categoryId,
                                                        @Param("roleIds") List<Long> roleIds,
                                                        @Param("limit") int limit);
-
-    @Select("SELECT ts_headline('simple', #{content}, to_tsquery('simple', #{tsQuery}), 'StartSel=<b>, StopSel=</b>, MaxWords=60, MinWords=20')")
-    String headline(@Param("content") String content, @Param("tsQuery") String tsQuery);
 
     /** 回填向量（TEXT 兼容存储，绕开 Wrapper 不走 TypeHandler 的限制） */
     @Update("UPDATE biz_doc_chunk SET embedding = #{vecText} WHERE id = #{id}")

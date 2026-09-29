@@ -16,7 +16,7 @@ import java.util.Map;
  */
 public interface BizDocSocialMapper extends BaseMapper<BizAccessLog> {
 
-    @Insert("INSERT INTO biz_favorite(user_id, doc_id) VALUES(#{userId}, #{docId}) ON CONFLICT DO NOTHING")
+    @Insert("INSERT IGNORE INTO biz_favorite(user_id, doc_id) VALUES(#{userId}, #{docId})")
     int favorite(@Param("userId") Long userId, @Param("docId") Long docId);
 
     @Delete("DELETE FROM biz_favorite WHERE user_id = #{userId} AND doc_id = #{docId}")
@@ -34,7 +34,7 @@ public interface BizDocSocialMapper extends BaseMapper<BizAccessLog> {
     @Select("SELECT count(*) FROM biz_favorite WHERE user_id = #{userId}")
     long countFavorites(@Param("userId") Long userId);
 
-    @Insert("INSERT INTO biz_subscription(user_id, sub_type, target_id) VALUES(#{userId}, #{subType}, #{targetId}) ON CONFLICT DO NOTHING")
+    @Insert("INSERT IGNORE INTO biz_subscription(user_id, sub_type, target_id) VALUES(#{userId}, #{subType}, #{targetId})")
     void subscribe(@Param("userId") Long userId, @Param("subType") String subType, @Param("targetId") Long targetId);
 
     @Delete("DELETE FROM biz_subscription WHERE id = #{id} AND user_id = #{userId}")

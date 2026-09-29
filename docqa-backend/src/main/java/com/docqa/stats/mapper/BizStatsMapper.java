@@ -11,9 +11,9 @@ import java.util.Map;
  */
 public interface BizStatsMapper {
 
-    @Select("SELECT count(*) AS doc_count, " +
-            "count(*) FILTER (WHERE status = 'PUBLISHED') AS published_count, " +
-            "count(*) FILTER (WHERE status = 'PENDING_AUDIT') AS pending_audit_count " +
+    @Select("SELECT COUNT(*) AS doc_count, " +
+            "SUM(IF(status = 'PUBLISHED', 1, 0)) AS published_count, " +
+            "SUM(IF(status = 'PENDING_AUDIT', 1, 0)) AS pending_audit_count " +
             "FROM biz_document WHERE deleted_at IS NULL")
     Map<String, Object> docOverview();
 
@@ -24,13 +24,13 @@ public interface BizStatsMapper {
     long failedIndexCount();
 
     @Select("SELECT LEFT(question, 24) AS question, count(*) AS count FROM biz_qa_log " +
-            "WHERE created_at >= now() - make_interval(days => #{days}) AND status = 'DONE' " +
+            "WHERE created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY) AND status = 'DONE' " +
             "GROUP BY LEFT(question, 24) ORDER BY count DESC LIMIT #{topN}")
     List<Map<String, Object>> hotQuestions(@Param("days") int days, @Param("topN") int topN);
 
-    @Select("SELECT d.id AS doc_id, d.title AS doc_title, count(a.id) AS quote_count FROM biz_document d " +
+    @Select("SELECT d.id AS doc_id, d.title AS doc_title, COUNT(a.id) AS quote_count FROM biz_document d " +
             "JOIN biz_access_log a ON a.doc_id = d.id AND a.action = 'QUOTE' " +
-            "WHERE d.deleted_at IS NULL AND a.created_at >= now() - make_interval(days => #{days}) " +
+            "WHERE d.deleted_at IS NULL AND a.created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY) " +
             "GROUP BY d.id, d.title ORDER BY quote_count DESC LIMIT #{topN}")
     List<Map<String, Object>> docQuotes(@Param("days") int days, @Param("topN") int topN);
 
@@ -38,13 +38,13 @@ public interface BizStatsMapper {
             "WHERE deleted_at IS NULL AND status = 'PUBLISHED' ORDER BY quote_count DESC LIMIT #{topN}")
     List<Map<String, Object>> docQuotesFallback(@Param("topN") int topN);
 
-    @Select("SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month, count(*) AS count " +
+    @Select("SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count " +
             "FROM biz_document WHERE deleted_at IS NULL " +
-            "AND created_at >= date_trunc('month', now()) - (#{months} || ' months')::interval " +
+            "AND created_at >= DATE_SUB(DATE_FORMAT(NOW(), '%Y-%m-01'), INTERVAL #{months} MONTH) " +
             "GROUP BY 1 ORDER BY 1")
     List<Map<String, Object>> uploadTrend(@Param("months") int months);
 
     @Select("SELECT DISTINCT query_text FROM biz_access_log " +
-            "WHERE action = 'SEARCH' AND query_text ILIKE '%' || #{q} || '%' LIMIT 8")
+            "WHERE action = 'SEARCH' AND query_text LIKE CONCAT('%', #{q}, '%') LIMIT 8")
     List<String> searchSuggest(@Param("q") String q);
 }

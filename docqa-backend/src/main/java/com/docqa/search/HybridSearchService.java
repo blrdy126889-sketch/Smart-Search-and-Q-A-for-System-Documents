@@ -55,15 +55,17 @@ public class HybridSearchService {
         List<Long> fromCtx = callerRoleIds != null ? callerRoleIds : safeRoleIds();
         final List<Long> roleIds = fromCtx.isEmpty() ? List.of(4L) : fromCtx;
 
-        String tsQuery = Tokenizer.sanitizeForTsQuery(Tokenizer.tokenize(trimmed));
-        boolean useKeyword = !"SEMANTIC".equalsIgnoreCase(mode) && !tsQuery.isBlank();
+        // MySQL ngram FULLTEXT 自然语言模式：直接使用分词空格串（空格=OR 语义）
+        String kw = Tokenizer.tokenize(trimmed);
+        String tsQuery = kw;
+        boolean useKeyword = !"SEMANTIC".equalsIgnoreCase(mode) && !kw.isBlank();
         boolean useVector = !"KEYWORD".equalsIgnoreCase(mode);
 
         CompletableFuture<List<Map<String, Object>>> bm25Future = useKeyword
                 ? CompletableFuture.supplyAsync(() ->
-                        chunkMapper.searchByKeyword(tsQuery, categoryId, roleIds, properties.getSearch().getRecallSize()), searchExecutor)
+                        chunkMapper.searchByKeyword(kw, categoryId, roleIds, properties.getSearch().getRecallSize()), searchExecutor)
                 .orTimeout(2, TimeUnit.SECONDS).exceptionally(e -> {
-                    log.warn("BM25 召回失败: {}", e.getMessage());
+                    log.warn("BM25 召回失败", e);
                     return List.of();
                 })
                 : CompletableFuture.completedFuture(List.of());
@@ -71,7 +73,7 @@ public class HybridSearchService {
         CompletableFuture<List<Map<String, Object>>> vecFuture = useVector
                 ? CompletableFuture.supplyAsync(() -> vectorSearch(trimmed, categoryId, roleIds), searchExecutor)
                 .orTimeout(8, TimeUnit.SECONDS).exceptionally(e -> {
-                    log.warn("向量召回失败: {}", e.getMessage());
+                    log.warn("向量召回失败", e);
                     return List.of();
                 })
                 : CompletableFuture.completedFuture(List.of());
@@ -176,8 +178,8 @@ public class HybridSearchService {
         // DB 端 ts_headline 与 tsv 的分词输入不一致，故改为应用层实现）
         Set<String> keywords = new java.util.HashSet<>();
         if (tsQuery != null && !tsQuery.isBlank()) {
-            for (String kw : tsQuery.split("\\|")) {
-                String w = kw.trim();
+            for (String word : tsQuery.split("\\s+")) {
+                String w = word.trim();
                 if (w.length() >= 2) keywords.add(escapeHtml(w));
             }
         }
