@@ -71,6 +71,11 @@ docqa:
     api-key: ${EMBEDDING_API_KEY:}
     model: ${EMBEDDING_MODEL:embedding-3}
     dimension: 1024
+  # 向量库（ChromaDB 独立存储语义向量；type=auto 时不可用自动回退 MySQL TEXT 余弦）
+  vector-store:
+    type: ${VECTOR_STORE_TYPE:auto}
+    chroma-base-url: ${CHROMA_BASE_URL:http://127.0.0.1:8100}
+    chroma-collection: docqa_chunks
   # LLM 问答服务（OpenAI 兼容协议；api-key 为空时自动降级 Mock）
   llm:
     base-url: ${LLM_BASE_URL:https://open.bigmodel.cn/api/paas/v4}

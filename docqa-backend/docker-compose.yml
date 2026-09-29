@@ -19,6 +19,16 @@ services:
       timeout: 3s
       retries: 20
 
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: docqa-chroma
+    volumes:
+      - chromadata:/chroma/chroma
+    ports:
+      - "8100:8000"
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+
   backend:
     build:
       context: .
@@ -40,6 +50,8 @@ services:
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-embedding-3}
+      VECTOR_STORE_TYPE: ${VECTOR_STORE_TYPE:-auto}
+      CHROMA_BASE_URL: http://chroma:8000
     ports:
       - "8080:8080"
 
@@ -58,4 +70,5 @@ services:
 
 volumes:
   mysqldata:
+  chromadata:
   node_modules:

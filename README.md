@@ -41,12 +41,12 @@
 │  未配置 API Key 时自动降级 Mock，全链路零依赖可运行        │
 └──────┬──────────────────────────────────┬───────────────┘
        │                                  │
-┌──────▼───────────┐          ┌───────────▼───────────────┐
-│ MySQL 8.0        │          │ 模型服务(可选)             │
-│ 关系数据 + 13表   │          │ 智谱 embedding-3 / GLM    │
-│ ngram全文+TEXT向量│          │ 或任意OpenAI兼容端点       │
-│ (Flyway自动迁移)  │          │ 或本地 vLLM/Ollama        │
-└──────────────────┘          └───────────────────────────┘
+┌──────▼───────────┐  ┌──────▼──────────┐  ┌───────────────┐
+│ MySQL 8.0        │  │ ChromaDB        │  │ 模型服务(可选) │
+│ 文档元数据+13表   │  │ 语义向量(HNSW   │  │ 智谱/GLM      │
+│ ngram全文检索     │  │ cosine)独立向量库│  │ OpenAI兼容    │
+│ (Flyway自动迁移)  │  │ 不可用自动回退   │  │ vLLM/Ollama   │
+└──────────────────┘  └─────────────────┘  └───────────────┘
 ```
 
 ## 🚀 快速开始
@@ -56,7 +56,7 @@
 ```bash
 git clone https://github.com/blrdy126889-sketch/Smart-Search-and-Q-A-for-System-Documents.git
 cd Smart-Search-and-Q-A-for-System-Documents/docqa-backend
-docker compose up -d        # mysql8 + backend + frontend
+docker compose up -d        # mysql8 + chromadb + backend + frontend
 # 前端: http://localhost:5173   后端: http://localhost:8080
 ```
 
@@ -91,6 +91,15 @@ npm install && npm run dev   # vite 代理 /api → localhost:8080
 | LLM_BASE_URL / LLM_MODEL | 智谱 / glm-4-flash | 任意 OpenAI 兼容端点 |
 | EMBEDDING_API_KEY / EMBEDDING_BASE_URL / EMBEDDING_MODEL | 空 / 智谱 / embedding-3 | 向量服务，同为 OpenAI 兼容协议 |
 
+## 🗄️ 双库存储架构（关系库 + 向量库）
+
+| 存储 | 职责 |
+|---|---|
+| **MySQL 8.0** | 文档元数据/版本/审核流/用户权限/日志 13 表；BM25 全文（ngram FULLTEXT）；向量 TEXT 冗余（回退用） |
+| **ChromaDB** | 文档切片**语义向量独立向量库**（HNSW + cosine 空间），入库管线双写；发布"删旧→回灌"；服务不可用或超时自动回退 MySQL TEXT 应用层余弦，检索永不中断 |
+
+`VECTOR_STORE_TYPE=auto|chroma|mysql` 可强制切换存储路径。
+
 ## 📖 API 一览（前缀 /api/v1，Swagger: /swagger-ui.html）
 
 ```
@@ -124,7 +133,7 @@ GET  /stats/doc-quotes          文档引用热度 TOP
 
 ## 🔬 关键设计
 
-- **向量存储**：TEXT 存储 + 应用层余弦排序（零扩展依赖）；迁移 PG+pgvector 可获得 HNSW 索引能力
+- **向量库独立**：ChromaDB（HNSW cosine）承载语义检索，MySQL 存元数据与全文——符合「关系库 + 向量库」经典 RAG 架构；Chroma 不可用时自动回退 MySQL TEXT 余弦，可用性优先
 - **入库可靠性**：`PENDING→PARSING→CHUNKING→EMBEDDING→READY/FAILED` 状态机 + 乐观锁迁移 + 每 5 分钟补偿重试（幂等）
 - **版本瞬切**：发布新版本时旧切片 `is_active=false`，检索立即切换无脏数据
 - **六大短事务**：上传/切片/向量化/发布/问答收尾/删除，替代长事务

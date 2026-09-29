@@ -17,6 +17,7 @@ public class DocQaProperties {
     private Search search = new Search();
     private Embedding embedding = new Embedding();
     private Llm llm = new Llm();
+    private VectorStore vectorStore = new VectorStore();
 
     @Data
     public static class Storage {
@@ -47,6 +48,14 @@ public class DocQaProperties {
         private String apiKey;
         private String model;
         private int dimension = 1024;
+    }
+
+    @Data
+    public static class VectorStore {
+        /** auto: Chroma 可用走 Chroma，否则回退 MySQL TEXT 余弦；可强制 chroma / mysql */
+        private String type = "auto";
+        private String chromaBaseUrl = "http://127.0.0.1:8100";
+        private String chromaCollection = "docqa_chunks";
     }
 
     @Data

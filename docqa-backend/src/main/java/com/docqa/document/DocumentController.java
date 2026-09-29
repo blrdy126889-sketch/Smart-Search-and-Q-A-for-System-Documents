@@ -50,6 +50,7 @@ public class DocumentController {
     private final StorageClient storageClient;
     private final IngestPipeline ingestPipeline;
     private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+    private final com.docqa.framework.vector.ChromaVectorStore chroma;
 
     private static final Set<String> ALLOWED_EXT = Set.of("txt", "doc", "docx", "pdf");
     private static final long MAX_SIZE = 50L * 1024 * 1024;
@@ -181,6 +182,7 @@ public class DocumentController {
         BizDocument doc = requireDoc(id);
         documentMapper.deleteById(id);
         chunkMapper.deactivateOtherVersions(id, doc.getCurrentVersionId() == null ? -1L : doc.getCurrentVersionId());
+        chromaDeleteQuietly(id);
         if (doc.getCategoryId() != null) categoryMapper.refreshDocCount(doc.getCategoryId());
         return R.ok();
     }
@@ -245,6 +247,7 @@ public class DocumentController {
                 .eq(BizDocument::getId, id).set(BizDocument::getStatus, "OFFLINE")
                 .set(BizDocument::getAuditRemark, reason));
         chunkMapper.deactivateOtherVersions(id, -1L);
+        chromaDeleteQuietly(id);
         return R.ok();
     }
 
@@ -258,6 +261,7 @@ public class DocumentController {
         if (!"READY".equals(version.getIndexStatus())) throw new BizException("版本索引未就绪，无法发布");
         BizDocument doc = requireDoc(version.getDocId());
         publishLatestVersion(doc, SecurityUtils.userId());
+        chromaResync(doc.getId());
         documentMapper.update(null, new LambdaUpdateWrapper<BizDocument>()
                 .eq(BizDocument::getId, doc.getId())
                 .set(BizDocument::getStatus, "PUBLISHED"));
@@ -457,6 +461,49 @@ public class DocumentController {
         return m;
     }
 
+    private void chromaDeleteQuietly(long docId) {
+        if (!chroma.isAvailable()) return;
+        try {
+            chroma.deleteByDocId(docId);
+        } catch (Exception ignore) { }
+    }
+
+    /** 发布后按当前版本回灌 Chroma：从 MySQL 切片（含 embedding TEXT）重建该文档全部向量 */
+    private void chromaResync(long docId) {
+        if (!chroma.isAvailable()) return;
+        try {
+            List<BizDocument> docs = documentMapper.selectList(
+                    new LambdaQueryWrapper<BizDocument>().eq(BizDocument::getId, docId));
+            if (docs.isEmpty()) return;
+            Long versionId = docs.get(0).getCurrentVersionId();
+            if (versionId == null) return;
+            List<com.docqa.document.entity.BizDocChunk> chunks = chunkMapper.selectList(
+                    new LambdaQueryWrapper<com.docqa.document.entity.BizDocChunk>()
+                            .eq(com.docqa.document.entity.BizDocChunk::getVersionId, versionId)
+                            .eq(com.docqa.document.entity.BizDocChunk::getIsActive, true));
+            if (chunks.isEmpty()) return;
+            List<String> ids = new ArrayList<>();
+            List<List<Double>> vectors = new ArrayList<>();
+            List<String> contents = new ArrayList<>();
+            List<Map<String, Object>> metas = new ArrayList<>();
+            for (var c : chunks) {
+                if (c.getEmbedding() == null || c.getEmbedding().isEmpty()) continue;
+                ids.add(String.valueOf(c.getId()));
+                vectors.add(c.getEmbedding());
+                contents.add(c.getContent());
+                Map<String, Object> m = new HashMap<>();
+                m.put("doc_id", c.getDocId());
+                m.put("version_id", c.getVersionId());
+                m.put("chunk_index", c.getChunkIndex());
+                m.put("heading_path", c.getHeadingPath() == null ? "" : c.getHeadingPath());
+                metas.add(m);
+            }
+            if (!ids.isEmpty()) {
+                chroma.upsertBatch(ids, vectors, contents, metas);
+            }
+        } catch (Exception ignore) { }
+    }
+
     /** 版本发布核心事务 T4：置当前版本 + 旧切片置灰 + 订阅通知 + 冗余摘要 */
     private void publishLatestVersion(BizDocument doc, long auditorId) {
         BizDocVersion latest = versionMapper.selectList(new LambdaQueryWrapper<BizDocVersion>()
@@ -469,6 +516,7 @@ public class DocumentController {
                 .set(BizDocument::getCurrentVersionId, latest.getId())
                 .set(BizDocument::getSummary, latest.getSummary()));
         chunkMapper.deactivateOtherVersions(doc.getId(), latest.getId());
+        chromaDeleteQuietly(doc.getId());
         versionMapper.update(null, new LambdaUpdateWrapper<BizDocVersion>()
                 .eq(BizDocVersion::getId, latest.getId())
                 .set(BizDocVersion::getPublishedAt, OffsetDateTime.now()));

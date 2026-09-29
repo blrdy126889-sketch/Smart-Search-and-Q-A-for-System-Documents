@@ -22,7 +22,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 文档入库管线：解析 → 切片 → 向量化 → 就绪（状态机 + 乐观锁 + 批量重试 + 自动摘要）
@@ -36,6 +38,7 @@ public class IngestPipeline {
     private final ParserFactory parserFactory;
     private final StorageClient storageClient;
     private final EmbeddingClient embeddingClient;
+    private final com.docqa.framework.vector.ChromaVectorStore chroma;
     private final LlmClient llmClient;
     private final BizDocVersionMapper versionMapper;
     private final BizDocChunkMapper chunkMapper;
@@ -112,6 +115,9 @@ public class IngestPipeline {
             for (int j = 0; j < vectors.size(); j++) {
                 updateChunkEmbedding(chunkIds.get(i + j), vectors.get(j));
             }
+            // 双写：向量同步至 ChromaDB（失败不阻断入库，检索自动回退 MySQL TEXT）
+            upsertChroma(chunkIds.subList(i, i + vectors.size()), vectors, batch,
+                    chunks.subList(i, i + vectors.size()));
         }
 
         // ④ READY
@@ -147,6 +153,26 @@ public class IngestPipeline {
             }
         }
         throw last != null ? last : new BizException("向量化失败");
+    }
+
+    private void upsertChroma(List<Long> ids, List<List<Double>> vectors,
+                              List<String> contents, List<BizDocChunk> meta) {
+        if (!chroma.isAvailable()) return;
+        try {
+            List<String> cid = ids.stream().map(String::valueOf).toList();
+            List<Map<String, Object>> metas = new ArrayList<>();
+            for (BizDocChunk c : meta) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("doc_id", c.getDocId());
+                m.put("version_id", c.getVersionId());
+                m.put("chunk_index", c.getChunkIndex());
+                m.put("heading_path", c.getHeadingPath() == null ? "" : c.getHeadingPath());
+                metas.add(m);
+            }
+            chroma.upsertBatch(cid, vectors, contents, metas);
+        } catch (Exception e) {
+            log.warn("Chroma 向量写入失败(已回退MySQL TEXT): {}", e.getMessage());
+        }
     }
 
     private void updateChunkEmbedding(Long chunkId, List<Double> vector) {

@@ -37,6 +37,9 @@ public interface BizDocChunkMapper extends BaseMapper<BizDocChunk> {
     @Update("UPDATE biz_doc_chunk SET embedding = #{vecText} WHERE id = #{id}")
     int updateChunkEmbeddingText(@Param("id") Long id, @Param("vecText") String vecText);
 
+    /** 按切片ID集取内容（Chroma 命中后回表） */
+    List<Map<String, Object>> selectChunksByIds(@Param("ids") List<String> ids);
+
     @Update("UPDATE biz_doc_chunk SET is_active = false WHERE doc_id = #{docId} AND version_id <> #{versionId}")
     int deactivateOtherVersions(@Param("docId") Long docId, @Param("versionId") Long versionId);
 }

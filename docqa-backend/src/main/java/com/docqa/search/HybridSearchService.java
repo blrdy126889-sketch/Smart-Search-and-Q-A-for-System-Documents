@@ -27,8 +27,10 @@ import java.util.concurrent.TimeUnit;
 public class HybridSearchService {
 
     private final BizDocChunkMapper chunkMapper;
+    private final com.docqa.document.mapper.BizDocumentMapper documentMapper;
     private final EmbeddingClient embeddingClient;
     private final DocQaProperties properties;
+    private final com.docqa.framework.vector.ChromaVectorStore chroma;
 
     @Autowired
     @Qualifier("searchExecutor")
@@ -83,9 +85,44 @@ public class HybridSearchService {
         return result;
     }
 
-    /** 向量路：查询向量化 → SQL 拉同构过滤候选 → 应用层余弦排序取 TopN */
+    /** 向量路：ChromaDB(HNSW cosine) 优先，失败/不可用回退 MySQL TEXT 应用层余弦 */
     private List<Map<String, Object>> vectorSearch(String query, Long categoryId, List<Long> roleIds) {
         List<Double> qVec = embeddingClient.embed(query);
+        if ("mysql".equalsIgnoreCase(properties.getVectorStore().getType())) {
+            return mysqlTextVectorSearch(qVec, categoryId, roleIds);
+        }
+        if (chroma.isAvailable()) {
+            try {
+                return chromaVectorSearch(qVec, categoryId, roleIds);
+            } catch (Exception e) {
+                log.warn("Chroma 检索失败，回退 MySQL TEXT 余弦: {}", e.getMessage());
+            }
+        }
+        return mysqlTextVectorSearch(qVec, categoryId, roleIds);
+    }
+
+    /** Chroma 路径：可见文档集过滤 → HNSW TopK → 回表取内容 */
+    private List<Map<String, Object>> chromaVectorSearch(List<Double> qVec, Long categoryId, List<Long> roleIds) {
+        List<Long> visibleDocIds = documentMapper.selectVisibleDocIds(roleIds);
+        if (visibleDocIds.isEmpty()) return List.of();
+        int topK = properties.getSearch().getRecallSize() * 3;
+        var hits = chroma.queryTopK(qVec, visibleDocIds, topK);
+        if (hits.isEmpty()) return List.of();
+        List<String> chunkIds = hits.stream().map(com.docqa.framework.vector.ChromaVectorStore.ChromaHit::chunkId).toList();
+        List<Map<String, Object>> rows = chunkMapper.selectChunksByIds(chunkIds);
+        Map<String, Double> scoreById = new HashMap<>();
+        for (var h : hits) scoreById.put(h.chunkId(), h.cosine());
+        for (Map<String, Object> row : rows) {
+            row.put("rank", scoreById.getOrDefault(String.valueOf(row.get("chunk_id")), 0.0));
+            row.put("hitTypes", new ArrayList<String>());
+        }
+        rows.sort((a, b) -> Double.compare((Double) b.get("rank"), (Double) a.get("rank")));
+        return rows.size() > properties.getSearch().getRecallSize()
+                ? new ArrayList<>(rows.subList(0, properties.getSearch().getRecallSize())) : rows;
+    }
+
+    /** MySQL TEXT 回退路径：SQL 拉同构过滤候选 → 应用层余弦排序 */
+    private List<Map<String, Object>> mysqlTextVectorSearch(List<Double> qVec, Long categoryId, List<Long> roleIds) {
         int candidateSize = properties.getSearch().getRecallSize() * 5;
         List<Map<String, Object>> candidates =
                 chunkMapper.searchByVectorCandidates(categoryId, roleIds, candidateSize);

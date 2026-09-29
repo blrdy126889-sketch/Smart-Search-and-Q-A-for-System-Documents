@@ -51,4 +51,14 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectChunksByIds" resultType="java.util.HashMap">
+        SELECT c.id AS chunk_id, c.doc_id, c.version_id, c.chunk_index, c.content,
+               c.heading_path, c.page_no, d.title AS doc_title, 0.0 AS rank_score
+        FROM biz_doc_chunk c
+        JOIN biz_document d ON d.id = c.doc_id
+        WHERE c.id IN
+        <foreach collection="ids" item="i" open="(" close=")" separator=",">#{i}</foreach>
+          AND c.is_active = 1
+    </select>
+
 </mapper>
